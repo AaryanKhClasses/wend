@@ -1,16 +1,18 @@
 // Importing Modules
 const { MessageEmbed, Permissions } = require('discord.js')
-const config = require('../../../config.json')
-const modlogs = require('../../../models/modlogs')
-const emojis = require('../../../utils/emojis.json')
+const config = require('../../config.json')
+const modlogs = require('../../models/modlogs')
+const emojis = require('../../utils/emojis.json')
 
 const { botname } = config // Get variables from config
 
 // Command Handler
 module.exports = { // Exporting the command
-    commands: 'kick',
+    name: 'kick',
+    description: 'Kicks the mentioned user from the server',
+    aliases: [],
     cooldown: 10,
-    callbacc: async (client, message, args) => {
+    async run(client, message, args) {
         const logsChannelID = message.guild.channels.cache.find(ch => ch.name.includes('mod-logs')).id // Getting the ID of the Mod-Logs channel in the server
         const logsChannel = message.guild.channels.cache.get(logsChannelID) // Getting the Mod-Logs channel from the server
 
