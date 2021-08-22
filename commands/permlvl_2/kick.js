@@ -10,7 +10,7 @@ const { botname } = config // Get variables from config
 module.exports = { // Exporting the command
     name: 'kick',
     description: 'Kicks the mentioned user from the server',
-    aliases: [],
+    aliases: ['k'],
     cooldown: 10,
     async run(client, message, args) {
         const logsChannelID = message.guild.channels.cache.find(ch => ch.name.includes('mod-logs')).id // Getting the ID of the Mod-Logs channel in the server
