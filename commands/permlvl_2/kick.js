@@ -102,15 +102,42 @@ module.exports = { // Exporting the command
         let reason = args[1] // Set reason to the second argument
         if(!reason) reason = "No Reason Specified" // If the reason is not set, set it to "No Reason Specified"
 
-        await target.kick(reason) // Kick the target
-        const successEmbed = new MessageEmbed() // Embed to show that the member has been kicked.
-        .setColor('GREEN')
-        .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
-        .setFooter(botname)
-        .setTimestamp()
-        .setDescription(`${emojis.success} Successfully kicked the mentioned member!`)
-        message.reply({ embeds: [ successEmbed ] })
+        let note
+        if(message.content.includes('-n') && !message.content.includes('-note')) { // If the user has the -n flag but not the -note flag
+            let x = message.content.split('-n')
+            const multipleX = new MessageEmbed() // Creating an embed
+            .setColor('RED')
+            .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
+            .setFooter(botname)
+            .setTimestamp()
+            .setDescription(`${emojis.error} You can only use one \`-n\` at a time!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.tag} Remove one of the \`-n\` tag.`)
+            if(x.length > 2) return message.reply({ embeds: [ multipleX ] })
+            note = x[1].slice(' ')
+        } else if(message.content.includes('-note') && !message.content.includes('-n')) { // If the user has the -note flag but not the -n flag
+            let x = message.content.split('-note')
+            const multipleX = new MessageEmbed() // Creating an embed
+            .setColor('RED')
+            .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
+            .setFooter(botname)
+            .setTimestamp()
+            .setDescription(`${emojis.error} You can only use one \`-note\` at a time!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.tag} Remove one of the \`-note\` tag.`)
+            if(x.length > 2) return message.reply({ embeds: [ multipleX ] })
+            note = x[1].slice(' ')
+        } else if(message.content.includes('-n') && message.content.includes('-note')) { // If the user has both the -n and -note flags
+            const multipleX = new MessageEmbed() // Creating an embed
+            .setColor('RED')
+            .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
+            .setFooter(botname)
+            .setTimestamp()
+            .setDescription(`${emojis.error} You can only use one \`-n\` or \`-note\` at a time!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.tag} Remove one of the \`-n\` or \`-note\` tag.`)
+            return message.reply({ embeds: [ multipleX ] })
+        } else { // If the user doesn't have any flags
+            note = "No Note Specified"
+        }
 
+        let isDMClosed = ''
+
+        await target.kick(reason) // Kick the target
         const logEmbed = new MessageEmbed() // Log Embed to show that the member has been kicked
         .setTitle('Member Kicked')
         .setColor('GREEN')
@@ -121,15 +148,27 @@ module.exports = { // Exporting the command
         .addField(`${emojis.id} User ID`, target.id, true)
         .addField(`${emojis.mod} Moderator`, `${message.author.tag} (${message.author.id})`)
         .addField(`${emojis.description} Reason`, reason)
+        .addField(`${emojis.tag} Moderator Note`, note)
         await logsChannel.send({ embeds: [ logEmbed ] }) // Send the embed to the log channel
 
         const userEmbed = new MessageEmbed() // Embed to show that the user has been kicked
         .setAuthor(`${message.guild.name}`, message.guild.iconURL())
         .setColor('RED')
-        .setDescription(`${emojis.guildRemove} You were kicked from **${message.guild.name}**\n${emojis.description} **Reason:** ${reason}`)
+        .setDescription(`${emojis.guildRemove} You were kicked from **${message.guild.name}**\n${emojis.description} **Reason:** ${reason}\n${emojis.tag} **Moderator Note:** ${note}`)
         .setFooter(botname)
         .setTimestamp()
-        await target.send({ embeds: [ userEmbed ] }) // Sends the embed to the target
+        target.user.send({ embeds: [ userEmbed ] }).catch(() => {
+            isDMClosed = `\n${emojis.bug} Could'nt DM the user as their DMs are off!`
+        })
+
+        const successEmbed = new MessageEmbed() // Embed to show that the member has been kicked.
+        .setColor('GREEN')
+        .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
+        .setFooter(botname)
+        .setTimestamp()
+        .setDescription(`${emojis.success} Successfully kicked the mentioned member!${isDMClosed}`)
+        message.reply({ embeds: [ successEmbed ] })
+
 
         const userID = target.id // Set userID to the target's ID
         const guildID = message.guild.id // Set guildID to the guild's ID
@@ -139,6 +178,7 @@ module.exports = { // Exporting the command
             moderator: message.author.id,
             timestamp: new Date(),
             reason: reason,
+            note: note,
         }
 
         await modlogs.findOneAndUpdate({ guildID: guildID }, { userID: userID, guildID: guildID, $push: { logs: log } }, { upsert: true }) // Adds the log to the database
