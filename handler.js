@@ -2,6 +2,7 @@
 const { Collection, MessageEmbed } = require('discord.js')
 const fs = require('fs')
 const config = require('./config.json')
+const emojis = require('./utils/emojis.json')
 
 const { botname, prefix } = config
 
@@ -40,7 +41,7 @@ module.exports = (client) => {
                 const embed = new MessageEmbed() // Creates a new embed
                 .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
                 .setColor('RED')
-                .setDescription(`You need to wait ${timeLeft.toFixed(1)} seconds before using this command again.`)
+                .setDescription(`${emojis.slowmode} You need to wait ${timeLeft.toFixed(1)} seconds before using this command again.`)
                 .setFooter(botname)
                 .setTimestamp()
                 return message.reply({ embeds: [embed] })

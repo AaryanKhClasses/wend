@@ -8,9 +8,9 @@ const { botname } = config // Get variables from config
 
 // Command Handler
 module.exports = { // Exporting the command
-    name: 'kick',
-    description: 'Kicks the mentioned user from the server',
-    aliases: ['k'],
+    name: 'warn',
+    description: 'Warns the mentioned user in the server',
+    aliases: ['w'],
     cooldown: 10,
     async run(client, message, args) {
         let logsChannel // Channel for logging.
@@ -38,16 +38,15 @@ module.exports = { // Exporting the command
             }
         }
 
-        if(!message.member.permissions.has(Permissions.FLAGS.KICK_MEMBERS)) { // If the user does not have permission to kick members
+        if(!message.member.permissions.has(Permissions.FLAGS.MANAGE_MESSAGES)) { // If the user does not have permission to warn members
             const errorEmbed = new MessageEmbed() // Creating an embed
             .setColor('RED')
             .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
             .setFooter(botname)
             .setTimestamp()
-            .setDescription(`${emojis.error} You do not have permission to run this command!\n${emojis.blank} ${emojis.doubleArrow} Permissions required: \`KICK_MEMBERS\``)
+            .setDescription(`${emojis.error} You do not have permission to run this command!\n${emojis.blank} ${emojis.doubleArrow} Permissions required: \`MANAGE_MESSAGES\``)
             return message.reply({ embeds: [ errorEmbed ] })
         }
-
 
         if(!target) { // If the target is not set
             const errorEmbed = new MessageEmbed() // Creating an embed
@@ -55,7 +54,7 @@ module.exports = { // Exporting the command
             .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
             .setFooter(botname)
             .setTimestamp()
-            .setDescription(`${emojis.error} Please mention a user to kick!`)
+            .setDescription(`${emojis.error} Please mention a user to warn!`)
             return message.reply({ embeds: [ errorEmbed ] })
         }
 
@@ -65,7 +64,7 @@ module.exports = { // Exporting the command
             .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
             .setFooter(botname)
             .setTimestamp()
-            .setDescription(`${emojis.error} You cannot kick yourself!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
+            .setDescription(`${emojis.error} You cannot warn yourself!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
             return message.reply({ embeds: [ errorEmbed ] })
         }
 
@@ -75,7 +74,7 @@ module.exports = { // Exporting the command
             .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
             .setFooter(botname)
             .setTimestamp()
-            .setDescription(`${emojis.error} Can't kick the mentioned member\n${emojis.bug} **Reason:** Member is a \`MODERATOR\` or an \`ADMINISTRATOR\`\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
+            .setDescription(`${emojis.error} Can't warn the mentioned member\n${emojis.bug} **Reason:** Member is a \`MODERATOR\` or an \`ADMINISTRATOR\`\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
             return message.reply({ embeds: [ errorEmbed ] })
         }
 
@@ -85,34 +84,23 @@ module.exports = { // Exporting the command
             .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
             .setFooter(botname)
             .setTimestamp()
-            .setDescription(`${emojis.error} You cannot kick someone with a higher role than you!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
-            return message.reply({ embeds: [ errorEmbed ] })
-        }
-
-        if(target.roles.highest.position > message.guild.me.roles.highest.position) { // If the target has a higher role than the bot
-            const errorEmbed = new MessageEmbed() // Creating an embed
-            .setColor('RED')
-            .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
-            .setFooter(botname)
-            .setTimestamp()
-            .setDescription(`${emojis.error} You cannot kick someone with a higher role than the bot!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
+            .setDescription(`${emojis.error} You cannot warn someone with a higher role than you!\n${emojis.fix} **Possible Fixes:** Here is a the list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.`)
             return message.reply({ embeds: [ errorEmbed ] })
         }
 
         let reason = args[1] // Set reason to the second argument
         if(!reason) reason = "No Reason Specified" // If the reason is not set, set it to "No Reason Specified"
 
-        await target.kick(reason) // Kick the target
-        const successEmbed = new MessageEmbed() // Embed to show that the member has been kicked.
+        const successEmbed = new MessageEmbed() // Embed to show that the member has been warned.
         .setColor('GREEN')
         .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
         .setFooter(botname)
         .setTimestamp()
-        .setDescription(`${emojis.success} Successfully kicked the mentioned member!`)
+        .setDescription(`${emojis.success} Successfully warned the mentioned user!`)
         message.reply({ embeds: [ successEmbed ] })
 
-        const logEmbed = new MessageEmbed() // Log Embed to show that the member has been kicked
-        .setTitle('Member Kicked')
+        const logEmbed = new MessageEmbed() // Log Embed to show that the member has been warned
+        .setTitle('Member Warned')
         .setColor('GREEN')
         .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
         .setFooter(botname)
@@ -123,18 +111,18 @@ module.exports = { // Exporting the command
         .addField(`${emojis.description} Reason`, reason)
         await logsChannel.send({ embeds: [ logEmbed ] }) // Send the embed to the log channel
 
-        const userEmbed = new MessageEmbed() // Embed to show that the user has been kicked
+        const userEmbed = new MessageEmbed() // Embed to show that the user has been warned
         .setAuthor(`${message.guild.name}`, message.guild.iconURL())
         .setColor('RED')
-        .setDescription(`${emojis.guildRemove} You were kicked from **${message.guild.name}**\n${emojis.description} **Reason:** ${reason}`)
+        .setDescription(`${emojis.guildRemove} You were warned in **${message.guild.name}**\n${emojis.description} **Reason:** ${reason}`)
         .setFooter(botname)
         .setTimestamp()
-        await target.send({ embeds: [ userEmbed ] }) // Sends the embed to the target
+        target.send({ embeds: [ userEmbed ] }) // Sends the embed to the target
 
         const userID = target.id // Set userID to the target's ID
         const guildID = message.guild.id // Set guildID to the guild's ID
         const log = {
-            logType: 'Kick',
+            logType: 'Warn',
             userID: userID,
             moderator: message.author.id,
             timestamp: new Date(),
