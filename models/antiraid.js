@@ -5,6 +5,8 @@ const antiraidSchema = new mongoose.Schema({
     userID: String,
     ROLE_CREATE: Number,
     ROLE_DELETE: Number,
+    CHANNEL_CREATE: Number,
+    CHANNEL_DELETE: Number,
 })
 
 const antiraid = mongoose.model('antiraid', antiraidSchema)
