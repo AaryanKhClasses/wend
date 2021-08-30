@@ -82,19 +82,19 @@ module.exports = (client) => { // Exporting the module
 
     async function unquarantine(interaction, logType) { // Unquarantine function
         if(!interaction.isButton()) return // If the interaction isn't a button, return
-        if(!interaction.member.roles.cache.find(r => r.name.includes('Trusted')) || interaction.member.id !== interaction.guild.ownerId) { // If the user who executed the action isn't trusted or the owner of the server, return
+        if(!interaction.member.roles.cache.find(r => r.name.includes('Trusted')) && interaction.user.id !== interaction.guild.ownerId) { // If the user who executed the action isn't trusted or the owner of the server, return
             const embed = new MessageEmbed() // Creates an embed
             .setAuthor(`${interaction.member.user.tag}`, interaction.member.user.displayAvatarURL({ dynamic: true }))
             .setColor('RED')
             .setDescription(`${emojis.error} You do not have the permission to use this command.\n${emojis.doubleArrow} **Permissions Required:** \`Trusted Administrator\` OR \`Server Owner\``)
             .setTimestamp()
             .setFooter(botname)
-            interaction.message.reply({ embeds: [ embed ] })
+            return interaction.message.reply({ embeds: [ embed ] })
         }
 
-        const userID = interaction.message.embeds[0].description.split('ID:** ')[1].substring(0, 18)
-        let quarantinedUser
-        if(interaction.guild.members.fetch(userID)) quarantinedUser = await interaction.guild.members.fetch(userID)
+        const userID = interaction.message.embeds[0].description.split('ID:** ')[1].substring(0, 18) // Gets the user ID from the embed
+        let quarantinedUser // Quarantined user
+        if(interaction.guild.members.fetch(userID)) quarantinedUser = await interaction.guild.members.fetch(userID) // If the user ID is valid, get the user
         else {
             const errorEmbed = new MessageEmbed() // Creating an embed
             .setColor('RED')
@@ -236,6 +236,58 @@ module.exports = (client) => { // Exporting the module
             const newData = new antiraid({ guildID: channel.guild.id, userID: member.id }) // Creates a new antiraid data
             newData.save() // Saves the new antiraid data
             await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: 1 }) // Updates the antiraid data with the new CHANNEL_DELETE number
+        }
+    })
+
+    client.on('guildBanAdd', async (ban) => {
+        quarantine(ban, 'MEMBER_BAN_ADD') // Quarantine the user for MEMBER_BAN_ADD log
+
+        const log = ban.guild.fetchAuditLogs({ type: 'MEMBER_BAN_ADD' }).then(audit => audit.entries.first()) // Gets the audit log for the member ban add
+        const user = log.executor // Gets the user who banned the member
+        const member = ban.guild.members.cache.get(ban.user.id) // Gets the member who was banned
+        const data = antiraid.findOne({ guildID: ban.guild.id, userID: user.id }) // Gets the antiraid data for the user who banned the member
+
+        if(data) { // If the antiraid data exists
+            let MEMBER_BAN_ADD_NUM = data.MEMBER_BAN_ADD // Gets the MEMBER_BAN_ADD number
+            if(!MEMBER_BAN_ADD_NUM) MEMBER_BAN_ADD_NUM = 1 // If the MEMBER_BAN_ADD number doesn't exist, set it to 1
+                await antiraid.findOneAndUpdate({ guildID: ban.guild.id, userID: user.id }, { guildID: ban.guild.id, userID: user.id, MEMBER_BAN_ADD: MEMBER_BAN_ADD_NUM + 1, $push: { BANNEDmembers: `+ ${member.user.tag}` } }) // Updates the antiraid data with the new MEMBER_BAN_ADD number and the new member name
+            console.log(MEMBER_BAN_ADD_NUM, `+ ${member.user.tag}`) // Logs the new MEMBER_BAN_ADD number and the new member name
+            setTimeout(async () => { // Sets a timeout
+                while(MEMBER_BAN_ADD_NUM > 0) { // While the MEMBER_BAN_ADD number is greater than 0
+                    await antiraid.findOneAndUpdate({ guildID: ban.guild.id, userID: user.id }, { guildID: ban.guild.id, userID: user.id, MEMBER_BAN_ADD: MEMBER_BAN_ADD_NUM - 1, $pull: { BANNEDmembers: `+ ${member.user.tag}` } }) // Updates the antiraid data with the new MEMBER_BAN_ADD number and the new member name
+                }
+            }, 1800000) // Sets the timeout to 30 minutes
+
+        } else { // If the antiraid data doesn't exist
+            const newData = new antiraid({ guildID: ban.guild.id, userID: user.id }) // Creates a new antiraid data
+            newData.save() // Saves the new antiraid data
+            await antiraid.findOneAndUpdate({ guildID: ban.guild.id, userID: user.id }, { guildID: ban.guild.id, userID: user.id, MEMBER_BAN_ADD: 1 }) // Updates the antiraid data with the new MEMBER_BAN_ADD number
+        }
+    })
+
+    client.on('guildBanRemove', async (ban) => {
+        quarantine(ban, 'MEMBER_BAN_REMOVE') // Quarantine the user for MEMBER_BAN_REMOVE log
+
+        const log = ban.guild.fetchAuditLogs({ type: 'MEMBER_BAN_REMOVE' }).then(audit => audit.entries.first()) // Gets the audit log for the member ban remove
+        const user = log.executor // Gets the user who unbanned the member
+        const member = ban.guild.members.cache.get(ban.user.id) // Gets the member who was unbanned
+        const data = antiraid.findOne({ guildID: ban.guild.id, userID: user.id }) // Gets the antiraid data for the user who unbanned the member
+
+        if(data) { // If the antiraid data exists
+            let MEMBER_BAN_REMOVE_NUM = data.MEMBER_BAN_REMOVE // Gets the MEMBER_BAN_REMOVE number
+            if(!MEMBER_BAN_REMOVE_NUM) MEMBER_BAN_REMOVE_NUM = 1 // If the MEMBER_BAN_REMOVE number doesn't exist, set it to 1
+                await antiraid.findOneAndUpdate({ guildID: ban.guild.id, userID: user.id }, { guildID: ban.guild.id, userID: user.id, MEMBER_BAN_REMOVE: MEMBER_BAN_REMOVE_NUM + 1, $push: { UNBANNEDmembers: `+ ${member.user.tag}` } }) // Updates the antiraid data with the new MEMBER_BAN_REMOVE number and the new member name
+            console.log(MEMBER_BAN_REMOVE_NUM, `+ ${member.user.tag}`) // Logs the new MEMBER_BAN_REMOVE number and the new member name
+            setTimeout(async () => { // Sets a timeout
+                while(MEMBER_BAN_REMOVE_NUM > 0) { // While the MEMBER_BAN_REMOVE number is greater than 0
+                    await antiraid.findOneAndUpdate({ guildID: ban.guild.id, userID: user.id }, { guildID: ban.guild.id, userID: user.id, MEMBER_BAN_REMOVE: MEMBER_BAN_REMOVE_NUM - 1, $pull: { UNBANNEDmembers: `+ ${member.user.tag}` } }) // Updates the antiraid data with the new MEMBER_BAN_REMOVE number and the new member name
+                }
+            }, 1800000) // Sets the timeout to 30 minutes
+
+        } else { // If the antiraid data doesn't exist
+            const newData = new antiraid({ guildID: ban.guild.id, userID: user.id }) // Creates a new antiraid data
+            newData.save() // Saves the new antiraid data
+            await antiraid.findOneAndUpdate({ guildID: ban.guild.id, userID: user.id }, { guildID: ban.guild.id, userID: user.id, MEMBER_BAN_REMOVE: 1 }) // Updates the antiraid data with the new MEMBER_BAN_REMOVE number
         }
     })
 }
