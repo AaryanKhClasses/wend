@@ -1,37 +1,38 @@
+// Importing modules
 const emojis = require('../utils/emojis.json')
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js')
 const { botname } = require('../config.json')
 const antiraid = require('../models/antiraid')
 
-module.exports = (client) => {
-    const logsRow = new MessageActionRow().addComponents(
-        new MessageButton()
+module.exports = (client) => { // Exporting the module
+    const logsRow = new MessageActionRow().addComponents( // Creating the logs row
+        new MessageButton() // First Button to unquarantine user
         .setCustomId('unquarantine')
         .setLabel('Restore User')
         .setStyle('SUCCESS'),
 
-        new MessageButton()
+        new MessageButton() // Second Button to ban user
         .setCustomId('ban')
         .setLabel('Ban User')
         .setStyle('DANGER'),
     )
 
-    const disabledLogsRow = new MessageActionRow().addComponents(
-        new MessageButton()
+    const disabledLogsRow = new MessageActionRow().addComponents( // Creating the disabled logs row
+        new MessageButton() // Disabled button after either unquarantine or ban
         .setCustomId('unquarantine_disabled')
         .setLabel('Restore User')
         .setStyle('SUCCESS')
         .setDisabled(),
 
-        new MessageButton()
+        new MessageButton() // Disabled button after either unquarantine or ban
         .setCustomId('ban_disabled')
         .setLabel('Ban User')
         .setStyle('DANGER')
         .setDisabled(),
     )
 
-    async function quarantine(action, logType) {
-        let limit = 5
+    async function quarantine(action, logType) { // Quarantine function
+        let limit = 5 // Setting the limit to 5
         let logsChannel // Channel for logging.
         if(action.guild.channels.cache.find(ch => ch.name.includes('mod-logs'))) { // If there is a mod-logs channel in the server
             const logsChannelID = action.guild.channels.cache.find(ch => ch.name.includes('mod-logs')).id // Getting the ID of the Mod-Logs channel in the server
@@ -40,49 +41,49 @@ module.exports = (client) => {
             logsChannel = await action.guild.channels.create('mod-logs', { type: 'GUILD_TEXT', topic: 'Mod Logs channels for bots.', reason: 'Logging channel required by wend.' }) // Creates a new mod-logs channel and sets the logsChannel to that channel.
         }
 
-        const log = await action.guild.fetchAuditLogs({ type: logType }).then(audit => audit.entries.first())
-        const user = log.executor
-        const member = await action.guild.members.fetch(user.id)
-        if(member.id === client.user.id) return
-        if(member.roles.cache.find(r => r.name.includes('Trusted')) || member.id === action.guild.ownerId) return
+        const log = await action.guild.fetchAuditLogs({ type: logType }).then(audit => audit.entries.first()) // Gets the first entry of the audit log
+        const user = log.executor // Gets the user who executed the action
+        const member = await action.guild.members.fetch(user.id) // Gets the member who executed the action
+        if(member.id === client.user.id) return // If the user who executed the action is the bot, return
+        if(member.roles.cache.find(r => r.name.includes('Trusted')) || member.id === action.guild.ownerId) return // If the user who executed the action is trusted or the owner of the server, return
 
-        const data = await antiraid.findOne({ guildID: action.guild.id, userID: member.id })
-        if(data) {
-            let ROLE_CREATE_NUM = data.ROLE_CREATE
-            if(!ROLE_CREATE_NUM) ROLE_CREATE_NUM = 1
-            if(ROLE_CREATE_NUM > limit) {
-                let quarantinedRole
-                if(action.guild.roles.cache.find(r => r.name.includes('Quarantined'))) quarantinedRole = action.guild.roles.cache.find(r => r.name.includes('Quarantined'))
-                else quarantinedRole = await action.guild.roles.create({ name: 'Quarantined', reason: 'Quarantined role required by Wend\'s Anti Raid Feature.' })
+        const data = await antiraid.findOne({ guildID: action.guild.id, userID: member.id }) // Finds the user in the database
+        if(data) { // If the user is in the database
+            let ROLE_CREATE_NUM = data.ROLE_CREATE // Gets the number of role creations
+            if(!ROLE_CREATE_NUM) ROLE_CREATE_NUM = 1 // If the number of role creations is undefined, set it to 1
+            if(ROLE_CREATE_NUM > limit) { // If the number of role creations is greater than the limit
+                let quarantinedRole // Quarantined role
+                if(action.guild.roles.cache.find(r => r.name.includes('Quarantined'))) quarantinedRole = action.guild.roles.cache.find(r => r.name.includes('Quarantined')) // If there is a quarantined role in the server
+                else quarantinedRole = await action.guild.roles.create({ name: 'Quarantined', reason: 'Quarantined role required by Wend\'s Anti Raid Feature.' }) // If there isn't a quarantined role in the server, create one
 
-                const allChannels = action.guild.channels.cache.filter(ch => ch.type !== 'GUILD_CATEGORY')
-                allChannels.forEach(ch => ch.permissionOverwrites.create(quarantinedRole, { SEND_MESSAGES: false, ADD_REACTIONS: false, VIEW_CHANNEL: false }))
+                const allChannels = action.guild.channels.cache.filter(ch => ch.type !== 'GUILD_CATEGORY') // Gets all channels in the server
+                allChannels.forEach(ch => ch.permissionOverwrites.create(quarantinedRole, { SEND_MESSAGES: false, ADD_REACTIONS: false, VIEW_CHANNEL: false })) // Sets the permissions for all channels to the quarantined role
 
-                member.roles.set([quarantinedRole])
-                const embed = new MessageEmbed()
+                member.roles.set([quarantinedRole]) // Adds the quarantined role to the user
+                const embed = new MessageEmbed() // Creates an embed
                 .setAuthor(`${member.user.tag}`, member.user.displayAvatarURL({ dynamic: true }))
                 .setColor('GREEN')
                 .setTitle('Member Quarantined.')
                 .setDescription(`${emojis.user} **Member:** ${member.user.tag}\n${emojis.id} **Member ID:** ${member.id}\n${emojis.role} **All Roles Cleansed:** ${emojis.success}\n${emojis.mask} **Member Quarantined:** ${emojis.success}\n${emojis.description} **Reason:** Member Triggered Anti-Raid | Trigger ID: \`${logType}\``)
                 .setTimestamp()
                 .setFooter(botname)
-                logsChannel.send({ embeds: [ embed ], components: [ logsRow ] })
+                logsChannel.send({ embeds: [ embed ], components: [ logsRow ] }) // Sends the embed to the logs channel
 
-                const userEmbed = new MessageEmbed()
+                const userEmbed = new MessageEmbed() // Creates an embed
                 .setAuthor(`${member.user.tag}`, member.user.displayAvatarURL({ dynamic: true }))
                 .setColor('RED')
                 .setDescription(`${emojis.mask} You have been quarantined in **${action.guild.name}**\n${emojis.description} **Reason:** Anti-Raid Triggered | ID: \`${logType}\`\n${emojis.blank} User created more than 5 roles in the last 30 minutes.\n${emojis.role} **Roles:** \`\`\`diff\n${data.createdRoles.join('\n')}\`\`\``)
                 .setTimestamp()
                 .setFooter(botname)
-                member.send({ embeds: [ userEmbed ] })
+                member.send({ embeds: [ userEmbed ] }) // Sends the embed to the user
             }
         }
     }
 
-    async function unquarantine(interaction, logType) {
-        if(!interaction.isButton()) return
-        if(!interaction.member.roles.cache.find(r => r.name.includes('Trusted')) || interaction.member.id !== interaction.guild.ownerId) {
-            const embed = new MessageEmbed()
+    async function unquarantine(interaction, logType) { // Unquarantine function
+        if(!interaction.isButton()) return // If the interaction isn't a button, return
+        if(!interaction.member.roles.cache.find(r => r.name.includes('Trusted')) || interaction.member.id !== interaction.guild.ownerId) { // If the user who executed the action isn't trusted or the owner of the server, return
+            const embed = new MessageEmbed() // Creates an embed
             .setAuthor(`${interaction.member.user.tag}`, interaction.member.user.displayAvatarURL({ dynamic: true }))
             .setColor('RED')
             .setDescription(`${emojis.error} You do not have the permission to use this command.\n${emojis.doubleArrow} **Permissions Required:** \`Trusted Administrator\` OR \`Server Owner\``)
@@ -104,10 +105,10 @@ module.exports = (client) => {
             return interaction.reply({ embeds: [ errorEmbed ] })
         }
 
-        if(interaction.customId === "unquarantine") {
-            const quarantinedRole = interaction.guild.roles.cache.find(r => r.name.includes('Quarantined'))
-            quarantinedUser.roles.remove(quarantinedRole)
-            interaction.update({ components: [ disabledLogsRow ] })
+        if(interaction.customId === "unquarantine") { // If the interaction is the unquarantine button
+            const quarantinedRole = interaction.guild.roles.cache.find(r => r.name.includes('Quarantined')) // Gets the quarantined role
+            quarantinedUser.roles.remove(quarantinedRole) // Removes the quarantined role from the user
+            interaction.update({ components: [ disabledLogsRow ] }) // Updates the interaction to remove the logs row
 
             const successEmbed = new MessageEmbed() // Creating an embed
             .setColor('GREEN')
@@ -115,10 +116,10 @@ module.exports = (client) => {
             .setFooter(botname)
             .setTimestamp()
             .setDescription(`${emojis.success} Successfully restored the member\n${emojis.user} **Member:** ${quarantinedUser}\n${emojis.id} **Member ID:** ${userID}\n${emojis.mod} **Moderator:** ${interaction.member.user.tag}\n${emojis.description} **Reason:** Member Triggered Anti-Raid | Trigger ID: \`${logType}\``)
-            interaction.message.reply({ embeds: [ successEmbed ] })
-        } else if(interaction.customId === 'ban') {
-            quarantinedUser.ban({ reason: `Member Triggered Anti-Raid and was Banned by ${interaction.member.user.tag}` })
-            interaction.update({ components: [ disabledLogsRow ] })
+            interaction.message.reply({ embeds: [ successEmbed ] }) // Replies with the embed
+        } else if(interaction.customId === 'ban') { // If the interaction is the ban button
+            quarantinedUser.ban({ reason: `Member Triggered Anti-Raid and was Banned by ${interaction.member.user.tag}` }) // Bans the user
+            interaction.update({ components: [ disabledLogsRow ] }) // Updates the interaction to remove the logs row
 
             const successEmbed = new MessageEmbed() // Creating an embed
             .setColor('GREEN')
@@ -126,115 +127,115 @@ module.exports = (client) => {
             .setFooter(botname)
             .setTimestamp()
             .setDescription(`${emojis.success} Successfully banned the member\n${emojis.user} **Member:** ${quarantinedUser}\n${emojis.id} **Member ID:** ${userID}\n${emojis.mod} **Moderator:** ${interaction.member.user.tag}\n${emojis.description} **Reason:** Member Triggered Anti-Raid | Trigger ID: \`${logType}\``)
-            interaction.message.reply({ embeds: [ successEmbed ] })
+            interaction.message.reply({ embeds: [ successEmbed ] }) // Replies with the embed
         }
     }
 
-    client.on('interactionCreate', async (interaction) => {
-        unquarantine(interaction, 'ROLE_CREATE')
+    client.on('interactionCreate', async (interaction) => { // When an interaction is created
+        unquarantine(interaction, 'ROLE_CREATE') // Unquarantine the user for ROLE_CREATE log
     })
 
-    client.on('roleCreate', async (role) => {
-        quarantine(role, 'ROLE_CREATE')
+    client.on('roleCreate', async (role) => { // When a role is created
+        quarantine(role, 'ROLE_CREATE') // Quarantine the user for ROLE_CREATE log
 
-        const log = await role.guild.fetchAuditLogs({ type: 'ROLE_CREATE' }).then(audit => audit.entries.first())
-        const user = log.executor
-        const member = await role.guild.members.fetch(user.id)
-        const data = await antiraid.findOne({ guildID: role.guild.id, userID: member.id })
+        const log = await role.guild.fetchAuditLogs({ type: 'ROLE_CREATE' }).then(audit => audit.entries.first()) // Gets the audit log for the role create
+        const user = log.executor // Gets the user who created the role
+        const member = await role.guild.members.fetch(user.id) // Gets the member who created the role
+        const data = await antiraid.findOne({ guildID: role.guild.id, userID: member.id }) // Gets the antiraid data for the member who created the role
 
-        if(data) {
-            let ROLE_CREATE_NUM = data.ROLE_CREATE
-            if(!ROLE_CREATE_NUM) ROLE_CREATE_NUM = 1
-                await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_CREATE: ROLE_CREATE_NUM + 1, $push: { createdRoles: `+ ${role.name}` } })
-            console.log(ROLE_CREATE_NUM, `+ ${role.name}`)
-            setTimeout(async () => {
-                while(ROLE_CREATE_NUM > 0) {
-                    await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_CREATE: ROLE_CREATE_NUM - 1, $pull: { createdRoles: `+ ${role.name}` } })
+        if(data) { // If the antiraid data exists
+            let ROLE_CREATE_NUM = data.ROLE_CREATE // Gets the ROLE_CREATE number
+            if(!ROLE_CREATE_NUM) ROLE_CREATE_NUM = 1 // If the ROLE_CREATE number doesn't exist, set it to 1
+                await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_CREATE: ROLE_CREATE_NUM + 1, $push: { createdRoles: `+ ${role.name}` } }) // Updates the antiraid data with the new ROLE_CREATE number and the new role name
+            console.log(ROLE_CREATE_NUM, `+ ${role.name}`) // Logs the new ROLE_CREATE number and the new role name
+            setTimeout(async () => { // Sets a timeout
+                while(ROLE_CREATE_NUM > 0) { // While the ROLE_CREATE number is greater than 0
+                    await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_CREATE: ROLE_CREATE_NUM - 1, $pull: { createdRoles: `+ ${role.name}` } }) // Updates the antiraid data with the new ROLE_CREATE number and the new role name
                 }
-            }, 1800000)
+            }, 1800000) // Sets the timeout to 30 minutes
 
-        } else {
-            const newData = new antiraid({ guildID: role.guild.id, userID: member.id })
-            newData.save()
-            await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_CREATE: 1 })
+        } else { // If the antiraid data doesn't exist
+            const newData = new antiraid({ guildID: role.guild.id, userID: member.id }) // Creates a new antiraid data
+            newData.save() // Saves the new antiraid data
+            await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_CREATE: 1 }) // Updates the antiraid data with the new ROLE_CREATE number
         }
     })
 
-    client.on('roleDelete', async (role) => {
-        quarantine(role, 'ROLE_DELETE')
+    client.on('roleDelete', async (role) => { // When a role is deleted
+        quarantine(role, 'ROLE_DELETE') // Quarantine the user for ROLE_DELETE log
 
-        const log = await role.guild.fetchAuditLogs({ type: 'ROLE_DELETE' }).then(audit => audit.entries.first())
-        const user = log.executor
-        const member = await role.guild.members.fetch(user.id)
-        const data = await antiraid.findOne({ guildID: role.guild.id, userID: member.id })
+        const log = await role.guild.fetchAuditLogs({ type: 'ROLE_DELETE' }).then(audit => audit.entries.first()) // Gets the audit log for the role delete
+        const user = log.executor // Gets the user who deleted the role
+        const member = await role.guild.members.fetch(user.id) // Gets the member who deleted the role
+        const data = await antiraid.findOne({ guildID: role.guild.id, userID: member.id }) // Gets the antiraid data for the member who deleted the role
 
-        if(data) {
-            let ROLE_DELETE_NUM = data.ROLE_DELETE
-            if(!ROLE_DELETE_NUM) ROLE_DELETE_NUM = 1
-                await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_DELETE: ROLE_DELETE_NUM + 1, $push: { createdRoles: `+ ${role.name}` } })
-            console.log(ROLE_DELETE_NUM, `+ ${role.name}`)
-            setTimeout(async () => {
-                while(ROLE_DELETE_NUM > 0) {
-                    await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_DELETE: ROLE_DELETE_NUM - 1, $pull: { createdRoles: `+ ${role.name}` } })
+        if(data) { // If the antiraid data exists
+            let ROLE_DELETE_NUM = data.ROLE_DELETE // Gets the ROLE_DELETE number
+            if(!ROLE_DELETE_NUM) ROLE_DELETE_NUM = 1 // If the ROLE_DELETE number doesn't exist, set it to 1
+                await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_DELETE: ROLE_DELETE_NUM + 1, $push: { createdRoles: `+ ${role.name}` } }) // Updates the antiraid data with the new ROLE_DELETE number and the new role name
+            console.log(ROLE_DELETE_NUM, `+ ${role.name}`) // Logs the new ROLE_DELETE number and the new role name
+            setTimeout(async () => { // Sets a timeout
+                while(ROLE_DELETE_NUM > 0) { // While the ROLE_DELETE number is greater than 0
+                    await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_DELETE: ROLE_DELETE_NUM - 1, $pull: { createdRoles: `+ ${role.name}` } }) // Updates the antiraid data with the new ROLE_DELETE number and the new role name
                 }
-            }, 1800000)
+            }, 1800000) // Sets the timeout to 30 minutes
 
-        } else {
-            const newData = new antiraid({ guildID: role.guild.id, userID: member.id })
-            newData.save()
-            await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_DELETE: 1 })
+        } else { // If the antiraid data doesn't exist
+            const newData = new antiraid({ guildID: role.guild.id, userID: member.id }) // Creates a new antiraid data
+            newData.save() // Saves the new antiraid data
+            await antiraid.findOneAndUpdate({ guildID: role.guild.id, userID: member.id }, { guildID: role.guild.id, userID: member.id, ROLE_DELETE: 1 }) // Updates the antiraid data with the new ROLE_DELETE number
         }
     })
 
-    client.on('channelCreate', async (channel) => {
-        quarantine(channel, 'CHANNEL_CREATE')
+    client.on('channelCreate', async (channel) => { // When a channel is created
+        quarantine(channel, 'CHANNEL_CREATE') // Quarantine the user for CHANNEL_CREATE log
 
-        const log = await channel.guild.fetchAuditLogs({ type: 'CHANNEL_CREATE' }).then(audit => audit.entries.first())
-        const user = log.executor
-        const member = await channel.guild.members.fetch(user.id)
-        const data = await antiraid.findOne({ guildID: channel.guild.id, userID: member.id })
+        const log = await channel.guild.fetchAuditLogs({ type: 'CHANNEL_CREATE' }).then(audit => audit.entries.first()) // Gets the audit log for the channel create
+        const user = log.executor // Gets the user who created the channel
+        const member = await channel.guild.members.fetch(user.id) // Gets the member who created the channel
+        const data = await antiraid.findOne({ guildID: channel.guild.id, userID: member.id }) // Gets the antiraid data for the member who created the channel
 
-        if(data) {
-            let CHANNEL_CREATE_NUM = data.CHANNEL_CREATE
-            if(!CHANNEL_CREATE_NUM) CHANNEL_CREATE_NUM = 1
-                await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_CREATE: CHANNEL_CREATE_NUM + 1, $push: { createdchannels: `+ ${channel.name}` } })
-            console.log(CHANNEL_CREATE_NUM, `+ ${channel.name}`)
-            setTimeout(async () => {
-                while(CHANNEL_CREATE_NUM > 0) {
-                    await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_CREATE: CHANNEL_CREATE_NUM - 1, $pull: { createdchannels: `+ ${channel.name}` } })
+        if(data) { // If the antiraid data exists
+            let CHANNEL_CREATE_NUM = data.CHANNEL_CREATE // Gets the CHANNEL_CREATE number
+            if(!CHANNEL_CREATE_NUM) CHANNEL_CREATE_NUM = 1 // If the CHANNEL_CREATE number doesn't exist, set it to 1
+                await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_CREATE: CHANNEL_CREATE_NUM + 1, $push: { createdchannels: `+ ${channel.name}` } }) // Updates the antiraid data with the new CHANNEL_CREATE number and the new channel name
+            console.log(CHANNEL_CREATE_NUM, `+ ${channel.name}`) // Logs the new CHANNEL_CREATE number and the new channel name
+            setTimeout(async () => { // Sets a timeout
+                while(CHANNEL_CREATE_NUM > 0) { // While the CHANNEL_CREATE number is greater than 0
+                    await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_CREATE: CHANNEL_CREATE_NUM - 1, $pull: { createdchannels: `+ ${channel.name}` } }) // Updates the antiraid data with the new CHANNEL_CREATE number and the new channel name
                 }
-            }, 1800000)
+            }, 1800000) // Sets the timeout to 30 minutes
 
-        } else {
-            const newData = new antiraid({ guildID: channel.guild.id, userID: member.id })
-            newData.save()
-            await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_CREATE: 1 })
+        } else { // If the antiraid data doesn't exist
+            const newData = new antiraid({ guildID: channel.guild.id, userID: member.id }) // Creates a new antiraid data
+            newData.save() // Saves the new antiraid data
+            await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_CREATE: 1 }) // Updates the antiraid data with the new CHANNEL_CREATE number
         }
     })
 
-    client.on('channelDelete', async (channel) => {
-        quarantine(channel, 'CHANNEL_DELETE')
+    client.on('channelDelete', async (channel) => { // When a channel is deleted
+        quarantine(channel, 'CHANNEL_DELETE') // Quarantine the user for CHANNEL_DELETE log
 
-        const log = await channel.guild.fetchAuditLogs({ type: 'CHANNEL_DELETE' }).then(audit => audit.entries.first())
-        const user = log.executor
-        const member = await channel.guild.members.fetch(user.id)
-        const data = await antiraid.findOne({ guildID: channel.guild.id, userID: member.id })
+        const log = await channel.guild.fetchAuditLogs({ type: 'CHANNEL_DELETE' }).then(audit => audit.entries.first()) // Gets the audit log for the channel delete
+        const user = log.executor // Gets the user who deleted the channel
+        const member = await channel.guild.members.fetch(user.id) // Gets the member who deleted the channel
+        const data = await antiraid.findOne({ guildID: channel.guild.id, userID: member.id }) // Gets the antiraid data for the member who deleted the channel
 
-        if(data) {
-            let CHANNEL_DELETE_NUM = data.CHANNEL_DELETE
-            if(!CHANNEL_DELETE_NUM) CHANNEL_DELETE_NUM = 1
-                await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: CHANNEL_DELETE_NUM + 1, $push: { DELETEdchannels: `+ ${channel.name}` } })
-            console.log(CHANNEL_DELETE_NUM, `+ ${channel.name}`)
-            setTimeout(async () => {
-                while(CHANNEL_DELETE_NUM > 0) {
-                    await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: CHANNEL_DELETE_NUM - 1, $pull: { DELETEdchannels: `+ ${channel.name}` } })
+        if(data) { // If the antiraid data exists
+            let CHANNEL_DELETE_NUM = data.CHANNEL_DELETE // Gets the CHANNEL_DELETE number
+            if(!CHANNEL_DELETE_NUM) CHANNEL_DELETE_NUM = 1 // If the CHANNEL_DELETE number doesn't exist, set it to 1
+                await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: CHANNEL_DELETE_NUM + 1, $push: { DELETEdchannels: `+ ${channel.name}` } }) // Updates the antiraid data with the new CHANNEL_DELETE number and the new channel name
+            console.log(CHANNEL_DELETE_NUM, `+ ${channel.name}`) // Logs the new CHANNEL_DELETE number and the new channel name
+            setTimeout(async () => { // Sets a timeout
+                while(CHANNEL_DELETE_NUM > 0) { // While the CHANNEL_DELETE number is greater than 0
+                    await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: CHANNEL_DELETE_NUM - 1, $pull: { DELETEdchannels: `+ ${channel.name}` } }) // Updates the antiraid data with the new CHANNEL_DELETE number and the new channel name
                 }
-            }, 1800000)
+            }, 1800000) // Sets the timeout to 30 minutes
 
-        } else {
-            const newData = new antiraid({ guildID: channel.guild.id, userID: member.id })
-            newData.save()
-            await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: 1 })
+        } else { // If the antiraid data doesn't exist
+            const newData = new antiraid({ guildID: channel.guild.id, userID: member.id }) // Creates a new antiraid data
+            newData.save() // Saves the new antiraid data
+            await antiraid.findOneAndUpdate({ guildID: channel.guild.id, userID: member.id }, { guildID: channel.guild.id, userID: member.id, CHANNEL_DELETE: 1 }) // Updates the antiraid data with the new CHANNEL_DELETE number
         }
     })
 }
