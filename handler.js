@@ -54,14 +54,14 @@ module.exports = (client) => {
 
         const guildSettings = await settings.findOne({ guildID: message.guild.id }) // Gets the guild settings
         if(!guildSettings) {
-            const newSettings = new settings({ guildID: message.guild.id, helperRole: '', modRole: '', adminRole: '', trustedUsers: '', trustedRoles: '' })
+            const newSettings = new settings({ guildID: message.guild.id, helperRole: '', modRole: '', adminRole: '', trustedUsers: '', trustedRole: '' })
             newSettings.save()
         }
 
         let userPermissions, userPermissionsLevel
         if(message.member.id === ownerID) { userPermissions = 'OWNER', userPermissionsLevel = 6 } // If the user is the bot owner, set the permissions to bot owner
         else if(message.member.id === message.guild.ownerID) { userPermissions = 'SERVER OWNER', userPermissionsLevel = 5 } // If the user is the server owner, set the permissions to server owner
-        else if(guildSettings.trustedRoles.indexOf(message.member.roles.cache.map(r => r).id) > -1 || guildSettings.trustedUsers.indexOf(message.author.id) > -1) { userPermissions = 'TRUSTED', userPermissionsLevel = 4 } // If the user has the trusted role, set the permissions to trusted
+        else if(message.member.roles.cache.find(r => r.id === guildSettings.trustedRole) || guildSettings.trustedUsers.indexOf(message.author.id) > -1) { userPermissions = 'TRUSTED', userPermissionsLevel = 4 } // If the user has the trusted role, set the permissions to trusted
         else if(message.member.roles.cache.find(r => r.id === guildSettings.adminRole)) { userPermissions = 'ADMIN', userPermissionsLevel = 3 } // If the user has the admin role, set the permissions to admin
         else if(message.member.roles.cache.find(r => r.id === guildSettings.modRole)) { userPermissions = 'MODERATOR', userPermissionsLevel = 2 } // If the user has the mod role, set the permissions to mod
         else if(message.member.roles.cache.find(r => r.id === guildSettings.helperRole)) { userPermissions = 'HELPER', userPermissionsLevel = 1 } // If the user has the helper role, set the permissions to helper
@@ -81,7 +81,7 @@ module.exports = (client) => {
                 const embed = new MessageEmbed() // Creates a new embed
                 .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
                 .setColor('RED')
-                .setDescription(`${emojis.error} You do not have permissions to use this command.\n${emojis.doubleArrow} **Permission Level Required:** ${command.permLevel} (\`${permissions}\`)\n${emojis.doubleArrowRed} **Your Permission Level:** ${userPermissionsLevel} (\`${userPermissions}\`)`)
+                .setDescription(`${emojis.error} You do not have permissions to use this command.\n${emojis.doubleArrow} **Permission Level Required:** ${command.permLevel} (\`${permissions}\`)\n${emojis.blank} ${emojis.doubleArrowRed} **Your Permission Level:** ${userPermissionsLevel} (\`${userPermissions}\`)`)
                 .setFooter(botname)
                 .setTimestamp()
                 return message.reply({ embeds: [embed] })

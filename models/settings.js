@@ -2,8 +2,8 @@ const mongoose = require('mongoose') // Importing mongoose
 
 const settingsSchema = new mongoose.Schema({ // Creating a new schema
     guildID: String,
-    trustedRoles: [String],
     trustedUsers: [String],
+    trustedRole: String,
     adminRole: String,
     modRole: String,
     helperRole: String,

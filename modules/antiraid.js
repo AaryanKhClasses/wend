@@ -3,6 +3,7 @@ const emojis = require('../utils/emojis.json')
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js')
 const { botname } = require('../config.json')
 const antiraid = require('../models/antiraid')
+const settings = require('../models/settings')
 
 module.exports = (client) => { // Exporting the module
     const logsRow = new MessageActionRow().addComponents( // Creating the logs row
@@ -45,7 +46,14 @@ module.exports = (client) => { // Exporting the module
         const user = log.executor // Gets the user who executed the action
         const member = await action.guild.members.fetch(user.id) // Gets the member who executed the action
         if(member.id === client.user.id) return // If the user who executed the action is the bot, return
-        if(member.roles.cache.find(r => r.name.includes('Trusted')) || member.id === action.guild.ownerId) return // If the user who executed the action is trusted or the owner of the server, return
+
+        const guildSettings = await settings.findOne({ guildID: action.guild.id }) // Gets the guild settings
+        if(!guildSettings) {
+            const newSettings = new settings({ guildID: action.guild.id, helperRole: '', modRole: '', adminRole: '', trustedRole: '', trustedUsers: '' }) // Creates a new settings object
+            newSettings.save() // Saves the new settings object
+        }
+
+        if(member.roles.cache.find(r => r.id === guildSettings.trustedRole) || guildSettings.trustedUsers.indexOf(member.id) > -1 || member.id === action.guild.ownerId) return // If the user who executed the action is trusted or the owner of the server, return
 
         const data = await antiraid.findOne({ guildID: action.guild.id, userID: member.id }) // Finds the user in the database
         if(data) { // If the user is in the database
@@ -82,7 +90,14 @@ module.exports = (client) => { // Exporting the module
 
     async function unquarantine(interaction, logType) { // Unquarantine function
         if(!interaction.isButton()) return // If the interaction isn't a button, return
-        if(!interaction.member.roles.cache.find(r => r.name.includes('Trusted')) && interaction.user.id !== interaction.guild.ownerId) { // If the user who executed the action isn't trusted or the owner of the server, return
+
+        const guildSettings = await settings.findOne({ guildID: interaction.guild.id }) // Gets the guild settings
+        if(!guildSettings) {
+            const newSettings = new settings({ guildID: interaction.guild.id, helperRole: '', modRole: '', adminRole: '', trustedRole: '', trustedUsers: '' }) // Creates a new settings object
+            newSettings.save() // Saves the new settings object
+        }
+
+        if(!interaction.member.roles.cache.find(r => r.id === guildSettings.trustedRole) && !guildSettings.trustedUsers.indexOf(interaction.member.id) > -1 && interaction.user.id !== interaction.guild.ownerId) { // If the user who executed the action isn't trusted or the owner of the server, return
             const embed = new MessageEmbed() // Creates an embed
             .setAuthor(`${interaction.member.user.tag}`, interaction.member.user.displayAvatarURL({ dynamic: true }))
             .setColor('RED')
