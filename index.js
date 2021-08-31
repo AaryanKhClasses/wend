@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 const config = require('./config.json')
 const handler = require('./handler')
 const antiraid = require('./modules/antiraid')
+const antispam = require('./modules/antispam')
 require('dotenv').config()
 
 const { prefix } = config // Gets variables from config
@@ -28,6 +29,7 @@ client.on('ready', () => { // Emits when the client is ready
     client.user.setActivity(`${prefix}help`, { type: 'LISTENING' }) // Sets the activity
     handler(client) // Calls the handler
     antiraid(client)
+    antispam(client)
 })
 
 client.login(process.env.TOKEN) // Logs in the bot

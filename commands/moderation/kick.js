@@ -11,6 +11,7 @@ module.exports = { // Exporting the command
     name: 'kick',
     description: 'Kicks the mentioned user from the server',
     aliases: ['k'],
+    permLevel: 2,
     cooldown: 10,
     async run(client, message, args) {
         let logsChannel // Channel for logging.
@@ -37,17 +38,6 @@ module.exports = { // Exporting the command
                 return message.reply({ embeds: [ errorEmbed ] })
             }
         }
-
-        if(!message.member.permissions.has(Permissions.FLAGS.KICK_MEMBERS)) { // If the user does not have permission to kick members
-            const errorEmbed = new MessageEmbed() // Creating an embed
-            .setColor('RED')
-            .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
-            .setFooter(botname)
-            .setTimestamp()
-            .setDescription(`${emojis.error} You do not have permission to run this command!\n${emojis.blank} ${emojis.doubleArrow} Permissions required: \`KICK_MEMBERS\``)
-            return message.reply({ embeds: [ errorEmbed ] })
-        }
-
 
         if(!target) { // If the target is not set
             const errorEmbed = new MessageEmbed() // Creating an embed

@@ -11,6 +11,7 @@ module.exports = { // Exporting the command
     name: 'ban',
     description: 'Bans the mentioned user from the server',
     aliases: ['b'],
+    permLevel: 2,
     cooldown: 10,
     async run(client, message, args) {
         let logsChannel // Channel for logging.
@@ -36,16 +37,6 @@ module.exports = { // Exporting the command
                 .setDescription(`${emojis.error} Cannot find the member with ID: ${args[0]}\n${emojis.fix} **Possible Fixes:** Here is a list of possible fixes\n${emojis.blank} ${emojis.id} Check if the ID is correct.\n ${emojis.blank} ${emojis.guildRemove} The user may have left the server.`)
                 return message.reply({ embeds: [ errorEmbed ] })
             }
-        }
-
-        if(!message.member.permissions.has(Permissions.FLAGS.BAN_MEMBERS)) { // If the user does not have permission to warn members
-            const errorEmbed = new MessageEmbed() // Creating an embed
-            .setColor('RED')
-            .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
-            .setFooter(botname)
-            .setTimestamp()
-            .setDescription(`${emojis.error} You do not have permission to run this command!\n${emojis.blank} ${emojis.doubleArrow} Permissions required: \`BAN_MEMBERS\``)
-            return message.reply({ embeds: [ errorEmbed ] })
         }
 
         if(!target) { // If the target is not set
