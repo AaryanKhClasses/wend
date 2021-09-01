@@ -56,35 +56,35 @@ module.exports = (client) => {
         if(!guildSettings) {
             const newSettings = new settings({ guildID: message.guild.id, helperRole: '', modRole: '', adminRole: '', trustedUsers: '', trustedRole: '' })
             newSettings.save()
-        }
+        } else {
+            let userPermissions, userPermissionsLevel
+            if(message.member.id === ownerID) { userPermissions = 'OWNER', userPermissionsLevel = 6 } // If the user is the bot owner, set the permissions to bot owner
+            else if(message.member.id === message.guild.ownerId) { userPermissions = 'SERVER OWNER', userPermissionsLevel = 5 } // If the user is the server owner, set the permissions to server owner
+            else if(message.member.roles.cache.find(r => r.id === guildSettings.trustedRole) || guildSettings.trustedUsers.indexOf(message.author.id) > -1) { userPermissions = 'TRUSTED', userPermissionsLevel = 4 } // If the user has the trusted role, set the permissions to trusted
+            else if(message.member.roles.cache.find(r => r.id === guildSettings.adminRole)) { userPermissions = 'ADMIN', userPermissionsLevel = 3 } // If the user has the admin role, set the permissions to admin
+            else if(message.member.roles.cache.find(r => r.id === guildSettings.modRole)) { userPermissions = 'MODERATOR', userPermissionsLevel = 2 } // If the user has the mod role, set the permissions to mod
+            else if(message.member.roles.cache.find(r => r.id === guildSettings.helperRole)) { userPermissions = 'HELPER', userPermissionsLevel = 1 } // If the user has the helper role, set the permissions to helper
+            else { userPermissions = 'MEMBER', userPermissionsLevel = 0 } // If the user is a member, set the permissions to member
 
-        let userPermissions, userPermissionsLevel
-        if(message.member.id === ownerID) { userPermissions = 'OWNER', userPermissionsLevel = 6 } // If the user is the bot owner, set the permissions to bot owner
-        else if(message.member.id === message.guild.ownerID) { userPermissions = 'SERVER OWNER', userPermissionsLevel = 5 } // If the user is the server owner, set the permissions to server owner
-        else if(message.member.roles.cache.find(r => r.id === guildSettings.trustedRole) || guildSettings.trustedUsers.indexOf(message.author.id) > -1) { userPermissions = 'TRUSTED', userPermissionsLevel = 4 } // If the user has the trusted role, set the permissions to trusted
-        else if(message.member.roles.cache.find(r => r.id === guildSettings.adminRole)) { userPermissions = 'ADMIN', userPermissionsLevel = 3 } // If the user has the admin role, set the permissions to admin
-        else if(message.member.roles.cache.find(r => r.id === guildSettings.modRole)) { userPermissions = 'MODERATOR', userPermissionsLevel = 2 } // If the user has the mod role, set the permissions to mod
-        else if(message.member.roles.cache.find(r => r.id === guildSettings.helperRole)) { userPermissions = 'HELPER', userPermissionsLevel = 1 } // If the user has the helper role, set the permissions to helper
-        else { userPermissions = 'MEMBER', userPermissionsLevel = 0 } // If the user is a member, set the permissions to member
+            if(command.permLevel) {
+                let permissions
+                if(command.permLevel === 6) permissions = 'OWNER'
+                else if(command.permLevel === 5) permissions = 'SERVER OWNER'
+                else if(command.permLevel === 4) permissions = 'TRUSTED'
+                else if(command.permLevel === 3) permissions = 'ADMIN'
+                else if(command.permLevel === 2) permissions = 'MODERATOR'
+                else if(command.permLevel === 1) permissions = 'HELPER'
+                else permissions = 'MEMBER'
 
-        if(command.permLevel) {
-            let permissions
-            if(command.permLevel === 6) permissions = 'OWNER'
-            else if(command.permLevel === 5) permissions = 'SERVER OWNER'
-            else if(command.permLevel === 4) permissions = 'TRUSTED'
-            else if(command.permLevel === 3) permissions = 'ADMIN'
-            else if(command.permLevel === 2) permissions = 'MODERATOR'
-            else if(command.permLevel === 1) permissions = 'HELPER'
-            else permissions = 'MEMBER'
-
-            if(command.permLevel > userPermissionsLevel) { // If the command requires permissions
-                const embed = new MessageEmbed() // Creates a new embed
-                .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
-                .setColor('RED')
-                .setDescription(`${emojis.error} You do not have permissions to use this command.\n${emojis.doubleArrow} **Permission Level Required:** ${command.permLevel} (\`${permissions}\`)\n${emojis.blank} ${emojis.doubleArrowRed} **Your Permission Level:** ${userPermissionsLevel} (\`${userPermissions}\`)`)
-                .setFooter(botname)
-                .setTimestamp()
-                return message.reply({ embeds: [embed] })
+                if(command.permLevel > userPermissionsLevel) { // If the command requires permissions
+                    const embed = new MessageEmbed() // Creates a new embed
+                    .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
+                    .setColor('RED')
+                    .setDescription(`${emojis.error} You do not have permissions to use this command.\n${emojis.doubleArrow} **Permission Level Required:** ${command.permLevel} (\`${permissions}\`)\n${emojis.blank} ${emojis.doubleArrowRed} **Your Permission Level:** ${userPermissionsLevel} (\`${userPermissions}\`)`)
+                    .setFooter(botname)
+                    .setTimestamp()
+                    return message.reply({ embeds: [embed] })
+                }
             }
         }
 
