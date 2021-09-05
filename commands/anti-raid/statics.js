@@ -76,10 +76,10 @@ module.exports = {
                 .setColor('BLUE')
                 .setTitle('Server Statics')
                 .setDescription(
-                    `${emojis.userSettings} **Trusted Role:** ${guildSettings.trustedRole || 'No Trusted Role'}\n` +
-                    `${emojis.admin} **Admin Role:** ${guildSettings.adminRole || 'No Admin Role'}\n` +
-                    `${emojis.mod} **Moderator Role:** ${guildSettings.modRole || 'No Moderator Role'}\n` +
-                    `${emojis.fix} **Helper Role:** ${guildSettings.helperRole || 'No Helper Role'}`,
+                    `${emojis.userSettings} **Trusted Role:** ${`<@&${guildSettings.trustedRole}>` || 'No Trusted Role'}\n` +
+                    `${emojis.admin} **Admin Role:** ${`<@&${guildSettings.adminRole}>` || 'No Admin Role'}\n` +
+                    `${emojis.mod} **Moderator Role:** ${`<@&${guildSettings.modRole}>` || 'No Moderator Role'}\n` +
+                    `${emojis.fix} **Helper Role:** ${`<@&${guildSettings.helperRole}>` || 'No Helper Role'}`,
                 )
                 .setFooter(botname)
                 .setTimestamp()

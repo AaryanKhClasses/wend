@@ -1,5 +1,4 @@
 const { MessageEmbed } = require('discord.js')
-const emojis = require('../../utils/emojis.json')
 const { botname } = require('../../config.json')
 
 module.exports = {
