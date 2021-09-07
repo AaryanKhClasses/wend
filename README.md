@@ -1,2 +1,2 @@
-# wend
-Just another moderation bot
+# Initial page
+
