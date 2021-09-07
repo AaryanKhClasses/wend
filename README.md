@@ -1,4 +1,8 @@
-# wend
+---
+description: Documentation & Introduction of Wend
+---
+
+# Wend Documentation
 
 ## Introduction
 

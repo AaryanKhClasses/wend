@@ -1,4 +1,4 @@
 # Table of contents
 
-* [wend](README.md)
+* [Wend Documentation](README.md)
 
