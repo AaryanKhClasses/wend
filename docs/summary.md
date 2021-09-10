@@ -1,6 +1,6 @@
 # Table of contents
 
-* [Wend Documentation](README.md)
+* [Wend Documentation](./)
 
 ## Introduction
 

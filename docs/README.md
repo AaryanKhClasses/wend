@@ -18,5 +18,3 @@ Invite wend here: [Invite Wend](https://dsc.gg/wendbot)
 Get support here: [Wend Support Server](https://dsc.gg/wend/)
 {% endhint %}
 
-
-
