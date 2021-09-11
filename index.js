@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 const config = require('./config.json')
 const handler = require('./handler')
 const antiraid = require('./modules/antiraid')
+const verifyCaptcha = require('./modules/verify-captcha')
 require('dotenv').config()
 
 const { prefix } = config // Gets variables from config
@@ -17,17 +18,18 @@ const client = new Client({ // Creates a new client
 client.commands = new Collection()
 client.cooldowns = new Collection()
 
-mongoose.connect(process.env.MONGOURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-})
+// mongoose.connect(process.env.MONGOURI, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//     useFindAndModify: false,
+// })
 
 client.on('ready', () => { // Emits when the client is ready
     console.log(`${client.user.username} is ready!`) // Logs that the bot is ready
     client.user.setActivity(`${prefix}help`, { type: 'LISTENING' }) // Sets the activity
     handler(client) // Calls the handler
-    antiraid(client)
+    // antiraid(client)
+    verifyCaptcha(client)
 })
 
 client.login(process.env.TOKEN) // Logs in the bot
