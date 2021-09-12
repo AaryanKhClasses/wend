@@ -1,8 +1,9 @@
-const { MessageEmbed } = require('discord.js')
+const { MessageEmbed, MessageAttachment } = require('discord.js')
 const { CaptchaGenerator } = require('captcha-canvas')
 const fs = require('fs')
 const emojis = require('../utils/emojis.json')
 const { botname } = require('../config.json')
+const path = require('path')
 
 module.exports = (client) => {
     client.on('guildMemberAdd', async (member) => {
@@ -21,29 +22,57 @@ module.exports = (client) => {
         fs.writeFileSync('./assets/captcha/image.png', buffer)
 
         const embed = new MessageEmbed()
+        .setAuthor(guild.name, guild.iconURL())
         .setTitle('Verification System')
         .setDescription(
-            `${emojis.group} You need to message the given captcha in order to access **<@${guild.name}**\n` +
+            `${emojis.group} You need to message the given captcha in order to access **${guild.name}**\n` +
             `${emojis.warning} **Things to be noted while filling captcha:**\n` +
             `${emojis.blank} ${emojis.checklist} Type the colored characters from Left to Right.\n` +
             `${emojis.blank} ${emojis.rulesgray} Ignore the light gray characters as they are decoy characters.\n` +
             `${emojis.blank} ${emojis.capitalization} All the characters are to be typed capitalized, small letters won't be considered.\n` +
             `${emojis.blank} ${emojis.slowmode} You only have 15 seconds to complete the verification process.`,
         )
-        .setImage('./assets/captcha/image.png')
         .setFooter(botname)
         .setTimestamp()
         .setColor('#1ABC9C')
-        member.send({ embeds: [embed] }) // Sends the captcha to the user
+        const msg = await member.send({ embeds: [embed], files: ['./assets/captcha/image.png'] }) // Sends the captcha to the user
 
         const filter = (m) => { return m.author.id === member.id } // Filters the message to the user
-        const msgs = await member.user.dmChannel.awaitMessages({ filter, max: 1, time: 15000 })
-        if(!msgs.size) return
+        const msgs = await msg.channel.awaitMessages({ filter, max: 1, time: 15000 })
+        if(!msgs.size) {
+            const guildInvite = await guild.invites.create(guild.channels.cache.filter(ch => ch.type === 'GUILD_TEXT' && ch.rawPosition === 0).first(), { maxUses: 1, maxAge: 300 }) // Creates an invite for the user to join the server
+            member.kick('Member didn\'t verified captcha in time.')
+            const sizeEmbed = new MessageEmbed()
+            .setAuthor(guild.name, guild.iconURL())
+            .setTitle('Verification System')
+            .setDescription(`${emojis.error} You were kicked from **${guild.name}** as you failed to answer the captcha in time.\n${emojis.doubleArrow} You can re-attempt to join the server by clicking [here](${guildInvite})`)
+            .setFooter(botname)
+            .setTimestamp()
+            .setColor('RED')
+            return await member.send({ embeds: [sizeEmbed] }) // Sends the embed to the user
+        }
         console.log(msgs.first().content)
         if(msgs.first().content === captcha.text) {
             member.roles.remove(quarantinedRole) // Removes the quarantined role from the user
+            const correctEmbed = new MessageEmbed()
+            .setAuthor(guild.name, guild.iconURL())
+            .setTitle('Verification System')
+            .setDescription(`${emojis.success} You successfully verified the captcha and you can access the server and chat!`)
+            .setFooter(botname)
+            .setTimestamp()
+            .setColor('GREEN')
+            return await member.send({ embeds: [correctEmbed] }) // Sends the embed to the user
        } else {
-            member.kick(`${member.user.tag} was kicked for not verifying their captcha.`) // Kicks the user
-       }
+        const guildInvite = await guild.invites.create(guild.channels.cache.filter(ch => ch.type === 'GUILD_TEXT' && ch.rawPosition === 0).first(), { maxUses: 1, maxAge: 300 }) // Creates an invite for the user to join the server
+        member.kick('Member didn\'t verified captcha correctly.')
+        const incorrectEmbed = new MessageEmbed()
+        .setAuthor(guild.name, guild.iconURL())
+        .setTitle('Verification System')
+        .setDescription(`${emojis.error} You were kicked from **${guild.name}** as you failed to answer the captcha correctly.\n${emojis.doubleArrow} You can re-attempt to join the server by clicking [here](${guildInvite})`)
+        .setFooter(botname)
+        .setTimestamp()
+        .setColor('RED')
+        return await member.send({ embeds: [incorrectEmbed] }) // Sends the embed to the user
+   }
     })
 }
